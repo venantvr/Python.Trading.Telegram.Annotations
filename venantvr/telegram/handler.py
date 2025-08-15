@@ -43,17 +43,27 @@ class TelegramHandler:
     @staticmethod
     @command(
         name="/help",
-        description="Liste toutes les commandes disponibles",
-        menu="/menu"
+        description="Liste tous les menus disponibles",
+        menu=None  # Pas associé à un menu spécifique
     )
-    def help() -> dict:
-        """Commande /help qui liste toutes les commandes distinctes par menu."""
+    def help(self) -> dict:
+        """Commande /help qui liste dynamiquement tous les menus référencés dans COMMAND_REGISTRY."""
+        text_response = "Voici les menus disponibles :\n"
         seen_menus = set()
-        text_response = "Voici toutes les commandes disponibles :\n"
+
+        # Parcourir COMMAND_REGISTRY pour trouver les menus uniques
         for cmd_name, cmd_details in COMMAND_REGISTRY.items():
             menu = cmd_details.get("menu")
-            if menu and menu.value != "/menu" and menu not in seen_menus:
-                seen_menus.add(menu)
-                description = cmd_details.get("description", "Pas de description.")
+            if menu and menu.value != "/menu" and menu.value not in seen_menus:
+                seen_menus.add(menu.value)
+                # Générer une description dynamique
+                description = f"Menu {menu.value.lstrip('/').capitalize()}"
+                # Si la commande est un menu (par exemple, /positions avec action 'menu'), utiliser sa description
+                if cmd_name == menu.value and cmd_details.get("action").__name__ == "menu":
+                    description = cmd_details.get("description", description)
                 text_response += f"\n• `{menu.value}` : {description}"
+
+        if not seen_menus:
+            text_response = "Aucun menu disponible pour le moment."
+
         return {"text": text_response, "parse_mode": "Markdown"}
