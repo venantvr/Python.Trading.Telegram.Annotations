@@ -35,3 +35,7 @@ class TelegramHandler:
             return response
         print(f"Action {action_func.__name__} not found in handler")  # Debug print
         return {"text": f"Erreur: Action pour '{command.value}' non trouvée."}
+
+    def bonjour(self):
+        return {"text": f"Bonjour {self.__class__.__name__}",
+                "reply_markup": ""}
