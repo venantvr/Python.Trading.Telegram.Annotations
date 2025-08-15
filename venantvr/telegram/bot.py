@@ -81,17 +81,20 @@ class TelegramBot:
                 print(f"Error in _sender: {e}")
             self.outgoing_queue.task_done()
 
+    # venantvr/telegram/bot.py
     def _find_handler_for_command(self, command_enum):
         """Retourne le handler qui a la méthode correspondant à la commande."""
         cmd_details = COMMAND_REGISTRY.get(command_enum.value)
         if not cmd_details:
             return None
         method_name = cmd_details["action"].__name__
+        handler_class = cmd_details.get("handler")
         for handler in self.handlers:
-            if hasattr(handler, method_name):
+            if handler.__class__ == handler_class and hasattr(handler, method_name):
                 return handler
         return None
 
+    # venantvr/telegram/bot.py
     def _processor(self):
         while True:
             update = self.incoming_queue.get()
@@ -107,9 +110,26 @@ class TelegramBot:
                     chat_id = str(update["message"]["chat"]["id"])
                     print(f"Received text: {text}, chat_id: {chat_id}")  # Debug print
 
-                    # Menu
-                    if text == "/menu":
-                        response_payload = self._build_menu_keyboard("/menu")
+                    # Vérifier si le texte correspond à un menu
+                    menu = None
+                    try:
+                        menu = Menu.from_value(text) if text.startswith('/') else None
+                    except ValueError:
+                        pass  # Pas un menu valide, continuer comme commande
+
+                    if menu and text in [m.value for m in Menu.get_all()]:
+                        # Trouver le handler associé au menu
+                        for handler in self.handlers:
+                            for cmd_name, cmd_details in COMMAND_REGISTRY.items():
+                                if (cmd_details.get("menu") == menu and
+                                        cmd_details.get("action").__name__ == "menu" and
+                                        cmd_details.get("handler") == handler.__class__):
+                                    response_payload = handler.menu()
+                                    break
+                            if response_payload:
+                                break
+                        if not response_payload:
+                            response_payload = self._build_menu_keyboard(text)
                     elif chat_id in self.active_prompts:
                         # Traitement des prompts en cours
                         prompt_info = self.active_prompts[chat_id]
@@ -137,6 +157,7 @@ class TelegramBot:
                                     print(f"Command enum error: {e}")
                                     response_payload = {"text": f"Erreur: Commande '{command_name}' non valide."}
                     else:
+                        # Traiter comme une commande
                         command_name = text.split(' ')[0]
                         command_details = COMMAND_REGISTRY.get(command_name)
                         if command_details:
