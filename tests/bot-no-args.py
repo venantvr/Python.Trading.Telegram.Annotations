@@ -3,7 +3,7 @@ import time
 
 from dotenv import load_dotenv
 
-from tests.my import MySimpleHandler
+from tests.my import HelloHandler, ByeHandler
 from venantvr.telegram.bot import TelegramBot
 
 # Assuming these are correctly defined in your project
@@ -17,10 +17,10 @@ if __name__ == "__main__":
         print("ERREUR : Impossible de trouver BOT_TOKEN ou CHAT_ID.")
         print("Veuillez créer un fichier .env et y mettre vos identifiants.")
     else:
-        bot = TelegramBot(bot_token=BOT_TOKEN, chat_id=CHAT_ID)
-        my_handler = MySimpleHandler()
-        bot.handler = my_handler
-        print(f"Bot démarré pour le chat ID {CHAT_ID}. Handler: {bot.handler}")
+        bot = TelegramBot(bot_token=BOT_TOKEN, chat_id=CHAT_ID, handlers=[HelloHandler(), ByeHandler()])
+        # my_handler = HelloHandler()
+        # bot.handler = my_handler
+        print(f"Bot démarré pour le chat ID {CHAT_ID}. Handlers: {bot.handlers}")
         print("Envoyez /menu, /bonjour1 ou /bonjour à votre bot.")
         print("Appuyez sur Ctrl+C pour arrêter.")
 

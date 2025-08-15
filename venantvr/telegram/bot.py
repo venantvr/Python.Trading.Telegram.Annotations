@@ -10,14 +10,20 @@ from venantvr.telegram.decorators import COMMAND_REGISTRY
 
 
 class TelegramBot:
-    def __init__(self, bot_token, chat_id):
+    def __init__(self, bot_token, chat_id, handlers=None):
         self.api_url = f"https://api.telegram.org/bot{bot_token}"
         self.chat_id = chat_id
         self.last_update_id = None
         self.incoming_queue = queue.Queue()
         self.outgoing_queue = queue.Queue()
-        self.handler = None
         self.active_prompts = {}
+
+        # Accept single handler or list
+        if handlers is None:
+            handlers = []
+        elif not isinstance(handlers, (list, tuple)):
+            handlers = [handlers]
+        self.handlers = list(handlers)
 
         threading.Thread(target=self._receiver, daemon=True).start()
         threading.Thread(target=self._sender, daemon=True).start()
@@ -74,6 +80,17 @@ class TelegramBot:
                 print(f"Error in _sender: {e}")
             self.outgoing_queue.task_done()
 
+    def _find_handler_for_command(self, command_enum):
+        """Retourne le handler qui a la méthode correspondant à la commande."""
+        cmd_details = COMMAND_REGISTRY.get(command_enum.value)
+        if not cmd_details:
+            return None
+        method_name = cmd_details["action"].__name__
+        for handler in self.handlers:
+            if hasattr(handler, method_name):
+                return handler
+        return None
+
     def _processor(self):
         while True:
             update = self.incoming_queue.get()
@@ -83,16 +100,17 @@ class TelegramBot:
             response_payload = None
             chat_id = None
             try:
-                # Handle all update types
+                # Handle messages texte
                 if "message" in update and "text" in update["message"]:
                     text = update["message"]["text"]
                     chat_id = str(update["message"]["chat"]["id"])
                     print(f"Received text: {text}, chat_id: {chat_id}")  # Debug print
 
-                    # Handle commands and prompts
+                    # Menu
                     if text == "/menu":
                         response_payload = self._build_menu_keyboard("/menu")
                     elif chat_id in self.active_prompts:
+                        # Traitement des prompts en cours
                         prompt_info = self.active_prompts[chat_id]
                         command_name = prompt_info['command']
                         command_details = COMMAND_REGISTRY.get(command_name)
@@ -101,17 +119,18 @@ class TelegramBot:
                         else:
                             prompt_info['arguments'].append(text)
                             num_questions = len(command_details.get("asks", []))
-                            print(f"Prompt for {command_name}, args collected: {prompt_info['arguments']}, expected: {num_questions}")  # Debug print
+                            print(f"Prompt for {command_name}, args collected: {prompt_info['arguments']}, expected: {num_questions}")  # Debug
                             if len(prompt_info['arguments']) < num_questions:
                                 next_question_index = len(prompt_info['arguments'])
                                 response_payload = {"text": command_details["asks"][next_question_index]}
                             else:
                                 try:
                                     cmd_enum = Command.from_value(command_name)
-                                    if self.handler:
-                                        response_payload = self.handler.process_command(cmd_enum, prompt_info['arguments'])
+                                    handler = self._find_handler_for_command(cmd_enum)
+                                    if handler:
+                                        response_payload = handler.process_command(cmd_enum, prompt_info['arguments'])
                                     else:
-                                        response_payload = {"text": "Erreur: Handler non défini."}
+                                        response_payload = {"text": "Erreur: Aucun handler trouvé pour cette commande."}
                                     del self.active_prompts[chat_id]
                                 except ValueError as e:
                                     print(f"Command enum error: {e}")
@@ -126,21 +145,23 @@ class TelegramBot:
                             else:
                                 try:
                                     cmd_enum = Command.from_value(command_name)
-                                    if self.handler:
-                                        response_payload = self.handler.process_command(cmd_enum, text.split(' ')[1:])
+                                    handler = self._find_handler_for_command(cmd_enum)
+                                    if handler:
+                                        response_payload = handler.process_command(cmd_enum, text.split(' ')[1:])
                                     else:
-                                        response_payload = {"text": "Erreur: Handler non défini."}
+                                        response_payload = {"text": "Erreur: Aucun handler trouvé pour cette commande."}
                                 except ValueError as e:
                                     print(f"Command enum error: {e}")
                                     response_payload = {"text": f"Erreur: Commande '{command_name}' non valide."}
                         else:
                             response_payload = {"text": f"Commande '{command_name}' non reconnue."}
-                # Handle callback queries (e.g., from inline keyboard buttons)
+
+                # Callback query (inline keyboard)
                 elif "callback_query" in update:
                     callback_query = update["callback_query"]
                     chat_id = str(callback_query["message"]["chat"]["id"])
                     callback_data = callback_query.get("data")
-                    print(f"Received callback query: {callback_data}, chat_id: {chat_id}")  # Debug print
+                    print(f"Received callback query: {callback_data}, chat_id: {chat_id}")  # Debug
                     if callback_data in COMMAND_REGISTRY:
                         command_details = COMMAND_REGISTRY.get(callback_data)
                         if command_details.get("asks"):
@@ -149,18 +170,21 @@ class TelegramBot:
                         else:
                             try:
                                 cmd_enum = Command.from_value(callback_data)
-                                if self.handler:
-                                    response_payload = self.handler.process_command(cmd_enum, [])
+                                handler = self._find_handler_for_command(cmd_enum)
+                                if handler:
+                                    response_payload = handler.process_command(cmd_enum, [])
                                 else:
-                                    response_payload = {"text": "Erreur: Handler non défini."}
+                                    response_payload = {"text": "Erreur: Aucun handler trouvé pour cette commande."}
                             except ValueError as e:
                                 print(f"Callback command enum error: {e}")
                                 response_payload = {"text": f"Erreur: Commande '{callback_data}' non valide."}
                     else:
                         response_payload = {"text": f"Action '{callback_data}' non reconnue."}
+
                 else:
-                    print(f"Non-text update received: {update}")  # Debug print
+                    print(f"Non-text update received: {update}")  # Debug
                     response_payload = {"text": "Désolé, je ne prends en charge que les messages texte et les actions de menu pour le moment."}
+
             except Exception as e:
                 print(f"Error in _processor: {e}")
                 response_payload = {"text": f"Erreur lors du traitement: {str(e)}"}
@@ -170,7 +194,7 @@ class TelegramBot:
                     response_payload['chat_id'] = chat_id or self.chat_id
                 if 'text' not in response_payload:
                     response_payload['text'] = ''
-                print(f"Sending response: {response_payload}")  # Debug print
+                print(f"Sending response: {response_payload}")  # Debug
                 self.send_message(response_payload)
             self.incoming_queue.task_done()
 
