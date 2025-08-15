@@ -52,7 +52,7 @@ class TelegramHandler:
         text_response = "Voici toutes les commandes disponibles :\n"
         for cmd_name, cmd_details in COMMAND_REGISTRY.items():
             menu = cmd_details.get("menu")
-            if menu and menu not in seen_menus:
+            if menu and menu.value != "/menu" and menu not in seen_menus:
                 seen_menus.add(menu)
                 description = cmd_details.get("description", "Pas de description.")
                 text_response += f"\n• `{cmd_name}` : {description}"
