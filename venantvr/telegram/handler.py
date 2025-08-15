@@ -1,7 +1,7 @@
 from typing import Optional
 
-from .classes.command import Command
-from .decorators import COMMAND_REGISTRY, command
+from venantvr.telegram.classes.command import Command
+from venantvr.telegram.decorators import command, COMMAND_REGISTRY
 
 
 class TelegramHandler:

@@ -1,7 +1,7 @@
 from typing import Callable, Dict, List, Optional
 
-from .classes.command import Command
-from .classes.menu import Menu
+from venantvr.telegram.classes.command import Command
+from venantvr.telegram.classes.menu import Menu
 
 COMMAND_REGISTRY: Dict[str, dict] = {}
 
