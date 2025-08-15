@@ -3,7 +3,8 @@ import time
 
 from dotenv import load_dotenv
 
-from tests.my import HelloHandler, ByeHandler
+from tests.handlers.bye import ByeHandler
+from tests.handlers.hello import HelloHandler
 from venantvr.telegram.bot import TelegramBot
 
 # Assuming these are correctly defined in your project

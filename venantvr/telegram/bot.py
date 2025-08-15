@@ -1,6 +1,7 @@
 import queue
 import threading
 import time
+from typing import List, Union
 
 import requests
 
@@ -198,8 +199,17 @@ class TelegramBot:
                 self.send_message(response_payload)
             self.incoming_queue.task_done()
 
-    def send_message(self, payload: dict):
-        self.outgoing_queue.put(payload)
+    def send_message(self, payload: Union[dict, List[dict]]):
+        if isinstance(payload, dict):
+            self.outgoing_queue.put(payload)
+        elif isinstance(payload, list):
+            for item in payload:
+                if isinstance(item, dict):
+                    self.outgoing_queue.put(item)
+                else:
+                    print(f"Ignored non-dict item in list: {item}")
+        else:
+            print(f"Ignored invalid payload type: {type(payload)}")
 
     def stop(self):
         self.outgoing_queue.put(None)
