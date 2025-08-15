@@ -55,5 +55,5 @@ class TelegramHandler:
             if menu and menu.value != "/menu" and menu not in seen_menus:
                 seen_menus.add(menu)
                 description = cmd_details.get("description", "Pas de description.")
-                text_response += f"\n• `{cmd_name}` : {description}"
+                text_response += f"\n• `{menu.value}` : {description}"
         return {"text": text_response, "parse_mode": "Markdown"}
