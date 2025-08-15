@@ -1,7 +1,7 @@
 from typing import Optional
 
 from .classes.command import Command
-from .decorators import COMMAND_REGISTRY
+from .decorators import COMMAND_REGISTRY, command
 
 
 class TelegramHandler:
@@ -39,3 +39,21 @@ class TelegramHandler:
     def bonjour(self):
         return {"text": f"Bonjour {self.__class__.__name__}",
                 "reply_markup": ""}
+
+    @staticmethod
+    @command(
+        name="/help",
+        description="Liste toutes les commandes disponibles",
+        menu="/menu"
+    )
+    def help() -> dict:
+        """Commande /help qui liste toutes les commandes distinctes par menu."""
+        seen_menus = set()
+        text_response = "Voici toutes les commandes disponibles :\n"
+        for cmd_name, cmd_details in COMMAND_REGISTRY.items():
+            menu = cmd_details.get("menu")
+            if menu and menu not in seen_menus:
+                seen_menus.add(menu)
+                description = cmd_details.get("description", "Pas de description.")
+                text_response += f"\n• `{cmd_name}` : {description}"
+        return {"text": text_response, "parse_mode": "Markdown"}
