@@ -104,31 +104,23 @@ class TelegramBot:
             response_payload = None
             chat_id = None
             try:
-                # Handle messages texte
                 if "message" in update and "text" in update["message"]:
                     text = update["message"]["text"]
                     chat_id = str(update["message"]["chat"]["id"])
                     print(f"Received text: {text}, chat_id: {chat_id}")  # Debug print
 
-                    # Vérifier si le texte correspond à un menu
-                    menu = None
-                    try:
-                        menu = Menu.from_value(text) if text.startswith('/') else None
-                    except ValueError:
-                        pass  # Pas un menu valide, continuer comme commande
-
-                    if menu and text in [m.value for m in Menu.get_all()]:
-                        # Trouver le handler associé au menu
+                    # Vérifier si le texte est une commande de menu
+                    command_details = COMMAND_REGISTRY.get(text)
+                    if command_details and command_details.get("action").__name__ == "menu":
+                        print(f"Found menu command: {text}, handler: {command_details.get('handler')}")  # Debug
+                        handler_class = command_details.get("handler")
                         for handler in self.handlers:
-                            for cmd_name, cmd_details in COMMAND_REGISTRY.items():
-                                if (cmd_details.get("menu") == menu and
-                                        cmd_details.get("action").__name__ == "menu" and
-                                        cmd_details.get("handler") == handler.__class__):
-                                    response_payload = handler.menu()
-                                    break
-                            if response_payload:
+                            if handler.__class__ == handler_class:
+                                print(f"Calling menu method for handler: {handler.__class__.__name__}")  # Debug
+                                response_payload = handler.menu()
                                 break
                         if not response_payload:
+                            print(f"No handler found for menu command: {text}")  # Debug
                             response_payload = self._build_menu_keyboard(text)
                     elif chat_id in self.active_prompts:
                         # Traitement des prompts en cours
@@ -136,6 +128,7 @@ class TelegramBot:
                         command_name = prompt_info['command']
                         command_details = COMMAND_REGISTRY.get(command_name)
                         if not command_details:
+                            print(f"Prompt command not found: {command_name}")  # Debug
                             response_payload = {"text": f"Erreur: Commande '{command_name}' non trouvée."}
                         else:
                             prompt_info['arguments'].append(text)
@@ -149,18 +142,21 @@ class TelegramBot:
                                     cmd_enum = Command.from_value(command_name)
                                     handler = self._find_handler_for_command(cmd_enum)
                                     if handler:
+                                        print(f"Executing command {command_name} with handler: {handler.__class__.__name__}")  # Debug
                                         response_payload = handler.process_command(cmd_enum, prompt_info['arguments'])
                                     else:
+                                        print(f"No handler found for command: {command_name}")  # Debug
                                         response_payload = {"text": "Erreur: Aucun handler trouvé pour cette commande."}
                                     del self.active_prompts[chat_id]
                                 except ValueError as e:
-                                    print(f"Command enum error: {e}")
+                                    print(f"Command enum error: {e}")  # Debug
                                     response_payload = {"text": f"Erreur: Commande '{command_name}' non valide."}
                     else:
-                        # Traiter comme une commande
+                        # Traiter comme une commande standard
                         command_name = text.split(' ')[0]
                         command_details = COMMAND_REGISTRY.get(command_name)
                         if command_details:
+                            print(f"Processing command: {command_name}, handler: {command_details.get('handler')}")  # Debug
                             if command_details.get("asks"):
                                 self.active_prompts[chat_id] = {'command': command_name, 'arguments': []}
                                 response_payload = {"text": command_details["asks"][0]}
@@ -169,23 +165,25 @@ class TelegramBot:
                                     cmd_enum = Command.from_value(command_name)
                                     handler = self._find_handler_for_command(cmd_enum)
                                     if handler:
+                                        print(f"Executing command {command_name} with handler: {handler.__class__.__name__}")  # Debug
                                         response_payload = handler.process_command(cmd_enum, text.split(' ')[1:])
                                     else:
+                                        print(f"No handler found for command: {command_name}")  # Debug
                                         response_payload = {"text": "Erreur: Aucun handler trouvé pour cette commande."}
                                 except ValueError as e:
-                                    print(f"Command enum error: {e}")
+                                    print(f"Command enum error: {e}")  # Debug
                                     response_payload = {"text": f"Erreur: Commande '{command_name}' non valide."}
                         else:
+                            print(f"Command not recognized: {command_name}")  # Debug
                             response_payload = {"text": f"Commande '{command_name}' non reconnue."}
 
-                # Callback query (inline keyboard)
                 elif "callback_query" in update:
                     callback_query = update["callback_query"]
                     chat_id = str(callback_query["message"]["chat"]["id"])
                     callback_data = callback_query.get("data")
                     print(f"Received callback query: {callback_data}, chat_id: {chat_id}")  # Debug
-                    if callback_data in COMMAND_REGISTRY:
-                        command_details = COMMAND_REGISTRY.get(callback_data)
+                    command_details = COMMAND_REGISTRY.get(callback_data)
+                    if command_details:
                         if command_details.get("asks"):
                             self.active_prompts[chat_id] = {'command': callback_data, 'arguments': []}
                             response_payload = {"text": command_details["asks"][0]}
@@ -194,13 +192,16 @@ class TelegramBot:
                                 cmd_enum = Command.from_value(callback_data)
                                 handler = self._find_handler_for_command(cmd_enum)
                                 if handler:
+                                    print(f"Executing callback command {callback_data} with handler: {handler.__class__.__name__}")  # Debug
                                     response_payload = handler.process_command(cmd_enum, [])
                                 else:
+                                    print(f"No handler found for callback command: {callback_data}")  # Debug
                                     response_payload = {"text": "Erreur: Aucun handler trouvé pour cette commande."}
                             except ValueError as e:
-                                print(f"Callback command enum error: {e}")
+                                print(f"Callback command enum error: {e}")  # Debug
                                 response_payload = {"text": f"Erreur: Commande '{callback_data}' non valide."}
                     else:
+                        print(f"Callback action not recognized: {callback_data}")  # Debug
                         response_payload = {"text": f"Action '{callback_data}' non reconnue."}
 
                 else:
@@ -208,7 +209,7 @@ class TelegramBot:
                     response_payload = {"text": "Désolé, je ne prends en charge que les messages texte et les actions de menu pour le moment."}
 
             except Exception as e:
-                print(f"Error in _processor: {e}")
+                print(f"Error in _processor: {e}")  # Debug
                 response_payload = {"text": f"Erreur lors du traitement: {str(e)}"}
 
             if response_payload:
