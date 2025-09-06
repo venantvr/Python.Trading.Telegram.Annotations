@@ -148,7 +148,7 @@ make check-all   # Run all checks
 │   ├── test_handler.py
 │   └── handlers/           # Handler examples
 ├── pyproject.toml          # Project configuration
-├── Makefile               # Development commands
+├── Makefile                # Development commands
 └── .pre-commit-config.yaml # Pre-commit hooks
 ```
 
