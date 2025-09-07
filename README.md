@@ -109,12 +109,6 @@ Run all tests:
 make test
 ```
 
-With code coverage:
-
-```bash
-python -m pytest tests/ -v --cov=venantvr --cov-report=html
-```
-
 ## 🔧 Development
 
 ### Useful Commands
@@ -158,7 +152,7 @@ make check-all   # Run all checks
 - **Linting**: Ruff
 - **Type checking**: Mypy with strict mode
 - **Docstrings**: Google format
-- **Tests**: Pytest with minimum 80% coverage
+- **Tests**: Pytest
 
 ## 🤝 Contributing
 
