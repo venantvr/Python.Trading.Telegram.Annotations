@@ -4,10 +4,10 @@ help:  ## Affiche cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 install:  ## Installe les dépendances de production
-	pip install -e .
+	pip install -r requirements.txt
 
 install-dev:  ## Installe toutes les dépendances (dev inclus)
-	pip install -e ".[dev]"
+	pip install -r requirements-dev.txt
 	pre-commit install
 
 test:  ## Lance les tests unitaires
