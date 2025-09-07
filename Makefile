@@ -1,43 +1,44 @@
-.PHONY: help install install-dev test lint format type-check clean run
+.PHONY: help test clean format check install
 
-help:  ## Affiche cette aide
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+PYTHON := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
+PIP := $(if $(wildcard .venv/bin/pip),.venv/bin/pip,pip3)
+SOURCES := tests
 
-install:  ## Installe les dépendances de production
-	pip install -r requirements.txt
+# Default target
+help:
+	@echo "Available targets:"
+	@echo "  test      Run tests"
+	@echo "  format    Format code with black and isort"
+	@echo "  check     Run format and tests"
+	@echo "  clean     Clean up generated files"
+	@echo "  install   Install dependencies"
+	@echo "  update    Update dependencies"
 
-install-dev:  ## Installe toutes les dépendances (dev inclus)
-	pip install -r requirements-dev.txt
-	pre-commit install
+# Testing
+test:
+	$(PYTHON) -m pytest tests/ -v --tb=short
 
-test:  ## Lance les tests unitaires
-	python -m pytest tests/ -v --cov=venantvr --cov-report=term-missing
+# Code formatting
+format:
+	$(PYTHON) -m black $(SOURCES) tests/
+	$(PYTHON) -m isort $(SOURCES) tests/
 
-lint:  ## Vérifie le style du code avec ruff
-	ruff check venantvr tests
+# Combined check
+check: format test
 
-format:  ## Formate le code avec black et ruff
-	black venantvr tests
-	ruff check --fix venantvr tests
+# Installation
+install:
+	$(PIP) install -r requirements.txt
+	$(PIP) install -r requirements-dev.txt
 
-type-check:  ## Vérifie les types avec mypy
-	mypy venantvr
+# Updates
+update:
+	$(PIP) install --upgrade pip
+	$(PIP) install --upgrade -r requirements.txt
+	$(PIP) install --upgrade -r requirements-dev.txt
 
-clean:  ## Nettoie les fichiers temporaires
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+# Clean up
+clean:
+	rm -rf build/ dist/ *.egg-info .pytest_cache/ .mypy_cache/
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*.pyd" -delete
-	find . -type f -name ".coverage" -delete
-	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
-
-run:  ## Lance le bot
-	python tests/main.py
-
-check-all: lint type-check test  ## Lance toutes les vérifications
-
-pre-commit:  ## Lance pre-commit sur tous les fichiers
-	pre-commit run --all-files

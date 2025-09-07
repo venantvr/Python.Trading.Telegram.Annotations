@@ -1,4 +1,4 @@
-from venantvr.telegram.decorators import command, COMMAND_REGISTRY
+from venantvr.telegram.decorators import COMMAND_REGISTRY, command
 from venantvr.telegram.handler import TelegramHandler
 
 
@@ -11,28 +11,16 @@ class HelloHandler(TelegramHandler):
             text_response += f"\n• `{cmd_name}` : {description}"
         return {"text": text_response, "parse_mode": "Markdown"}
 
-    @command(
-        name="/hello",
-        description="Salutation simple sans arguments",
-        asks=[],
-        kwargs_types={},
-        menu="/menu"
-    )
+    @command(name="/hello", description="Salutation simple sans arguments", asks=[], kwargs_types={}, menu="/menu")
     def hello(self) -> dict:
         return {"text": "Bonjour !!!!!"}
 
     @command(
         name="/bonjour",
         description="Salutation personnalisée avec nom et âge",
-        asks=[
-            "Quel est votre nom ?",
-            "Quel est votre âge ?"
-        ],
-        kwargs_types={
-            "name": str,
-            "age": int
-        },
-        menu="/menu"
+        asks=["Quel est votre nom ?", "Quel est votre âge ?"],
+        kwargs_types={"name": str, "age": int},
+        menu="/menu",
     )
     def bonjour(self, name: str, age: int) -> dict:
         if age < 18:
