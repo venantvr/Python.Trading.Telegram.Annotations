@@ -115,11 +115,12 @@ make test
 
 ```bash
 make help        # Show all available commands
-make format      # Format code with black and ruff
-make lint        # Check code style
-make type-check  # Check types with mypy
+make format      # Format code with black and isort
 make test        # Run tests
-make check-all   # Run all checks
+make check       # Run format and tests
+make install     # Install dependencies
+make update      # Update dependencies
+make clean       # Clean up generated files
 ```
 
 ### Project Structure
@@ -132,27 +133,34 @@ make check-all   # Run all checks
 │       ├── handler.py       # Command handler
 │       ├── decorators.py    # Command decorators
 │       ├── config.py        # Configuration and logging
-│       └── classes/         # Types and enums
-│           ├── command.py
-│           ├── menu.py
-│           ├── types.py
-│           └── enums.py
+│       ├── protocols.py     # Protocol definitions
+│       ├── classes/         # Types and enums
+│       │   ├── command.py
+│       │   ├── menu.py
+│       │   ├── types.py
+│       │   └── enums.py
+│       └── tools/           # Utility tools
+│           └── logger.py    # Logging utilities
 ├── tests/                   # Unit tests
 │   ├── test_bot.py
 │   ├── test_handler.py
 │   └── handlers/           # Handler examples
 ├── pyproject.toml          # Project configuration
 ├── Makefile                # Development commands
+├── requirements.txt        # Production dependencies
+├── requirements-dev.txt    # Development dependencies
+├── setup.py                # Setup configuration
 └── .pre-commit-config.yaml # Pre-commit hooks
 ```
 
 ## 📝 Code Conventions
 
-- **Style**: Black (max line: 120 characters)
-- **Linting**: Ruff
+- **Style**: Black (max line: 120 characters) + isort
+- **Linting**: Ruff + Flake8 (in pre-commit)
 - **Type checking**: Mypy with strict mode
 - **Docstrings**: Google format
 - **Tests**: Pytest
+- **Pre-commit hooks**: Multiple quality checks including security (bandit), spell checking (codespell), and more
 
 ## 🤝 Contributing
 
@@ -165,8 +173,8 @@ make check-all   # Run all checks
 ### Before Submitting
 
 ```bash
-make check-all  # Check everything
-make pre-commit # Run pre-commit
+make check      # Run format and tests
+pre-commit run --all-files  # Run all pre-commit hooks
 ```
 
 ## 📄 License
