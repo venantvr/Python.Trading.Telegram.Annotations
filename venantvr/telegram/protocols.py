@@ -8,11 +8,11 @@ from venantvr.telegram.classes.enums import DynamicEnumMember
 
 class HandlerProtocol(Protocol):
     """Protocole définissant l'interface d'un handler."""
-    
+
     def process_command(
-        self, 
-        cmd: Union[Command, DynamicEnumMember], 
-        arguments: List[Any]
+            self,
+            cmd: Union[Command, DynamicEnumMember],
+            arguments: List[Any]
     ) -> Optional[Dict[str, Any]]:
         """Traite une commande avec ses arguments.
         
